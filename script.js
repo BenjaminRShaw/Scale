@@ -1,36 +1,43 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const data = [
-        { name: "Human", size: 1.57 },
-        { name: "Cell", size: 8e-6 },
-        { name: "Coin", size: 2e-3 }
-    ];
+    const grid = document.getElementById('grid');
+    let scale = 1;
+    let initialPinchDistance = null;
+    let lastScale = 1;
 
-    const logScale = document.getElementById('log-scale');
-    const objectsContainer = document.getElementById('objects');
-
-    // Function to convert size to log scale position
-    const sizeToPosition = size => Math.log10(size) * 1000;
-
-    // Function to create and append objects
-    const createObjects = () => {
-        data.forEach(item => {
-            const objectDiv = document.createElement('div');
-            objectDiv.className = 'object';
-            objectDiv.style.top = `${sizeToPosition(item.size)}px`;
-            objectDiv.innerHTML = `<span>${item.size} m</span><span>${item.name}</span>`;
-            objectsContainer.appendChild(objectDiv);
-        });
+    const applyTransform = () => {
+        grid.style.transform = `scale(${scale})`;
     };
 
-    // Create objects initially
-    createObjects();
-
-    // Handle zooming
-    let scale = 1;
-    logScale.addEventListener('wheel', (event) => {
+    // Handle wheel event for desktop zoom
+    grid.addEventListener('wheel', (event) => {
         event.preventDefault();
         scale += event.deltaY * -0.01;
         scale = Math.min(Math.max(0.125, scale), 4);
-        logScale.style.transform = `scaleY(${scale})`;
+        applyTransform();
     });
+
+    // Handle pinch zoom for touch devices
+    grid.addEventListener('touchstart', (event) => {
+        if (event.touches.length === 2) {
+            initialPinchDistance = getDistance(event.touches[0], event.touches[1]);
+            lastScale = scale;
+        }
+    });
+
+    grid.addEventListener('touchmove', (event) => {
+        if (event.touches.length === 2) {
+            const currentPinchDistance = getDistance(event.touches[0], event.touches[1]);
+            if (initialPinchDistance) {
+                scale = lastScale * (currentPinchDistance / initialPinchDistance);
+                scale = Math.min(Math.max(0.125, scale), 4);
+                applyTransform();
+            }
+        }
+    });
+
+    const getDistance = (touch1, touch2) => {
+        const dx = touch1.clientX - touch2.clientX;
+        const dy = touch1.clientY - touch2.clientY;
+        return Math.sqrt(dx * dy + dy * dy);
+    };
 });

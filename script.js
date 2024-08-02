@@ -1,32 +1,88 @@
 document.addEventListener("DOMContentLoaded", function() {
     const rulerContainer = document.getElementById('ruler-container');
     const rulerHeight = rulerContainer.offsetHeight;
-    const minZoom = 1;
-    const maxZoom = 100;
     const fontSize = 14;
+    const minZoom = 0.001;
+    const maxZoom = 1000;
 
     let zoomLevel = 1;
     let items = [];
 
+    const waveTypes = [
+        { name: "Gamma Rays", wavelength: 1e-12 },
+        { name: "X-Rays", wavelength: 1e-10 },
+        { name: "Ultraviolet", wavelength: 1e-8 },
+        { name: "Visible Light", wavelength: 4e-7 },
+        { name: "Infrared", wavelength: 1e-5 },
+        { name: "Microwaves", wavelength: 1e-2 },
+        { name: "Radio Waves", wavelength: 1 }
+    ];
+
     function createRuler() {
         rulerContainer.innerHTML = '';
-        const ordersOfMagnitude = [1, 10, 100, 1000, 10000, 100000, 1000000];
 
-        for (let i = 0; i < ordersOfMagnitude.length; i++) {
-            const value = ordersOfMagnitude[i];
-            const markPosition = value * zoomLevel;
+        const mainIncrements = [1, 10, 100, 1000, 10000, 100000, 1000000];
+        const minorIncrements = [2, 5];
 
-            if (markPosition > rulerHeight) break;
+        let lastMarkPosition = rulerHeight;
 
-            const mark = document.createElement('div');
-            mark.className = 'ruler-mark';
-            mark.style.top = `${rulerHeight - markPosition}px`;
-            mark.textContent = `${value} m`;
+        for (let i = 0; i < mainIncrements.length; i++) {
+            const mainValue = mainIncrements[i];
+            let mainMarkPosition = mainValue * zoomLevel;
 
-            rulerContainer.appendChild(mark);
+            if (mainMarkPosition <= rulerHeight) {
+                createMark(mainValue, mainMarkPosition, true);
+                lastMarkPosition = mainMarkPosition;
+            }
+
+            // Add minor increments (e.g., 2m, 5m, 20m, 50m, etc.)
+            if (i < mainIncrements.length - 1) {
+                for (let j = 0; j < minorIncrements.length; j++) {
+                    const minorValue = mainIncrements[i] * minorIncrements[j];
+                    let minorMarkPosition = minorValue * zoomLevel;
+
+                    if (minorMarkPosition > lastMarkPosition - 20) break;
+
+                    if (minorMarkPosition <= rulerHeight) {
+                        createMark(minorValue, minorMarkPosition, false);
+                    }
+                }
+            }
         }
 
         placeItems();
+    }
+
+    function createMark(value, position, isMain) {
+        const mark = document.createElement('div');
+        mark.className = 'ruler-mark';
+        mark.style.top = `${rulerHeight - position}px`;
+        mark.textContent = `${value} m`;
+        mark.style.fontSize = `${fontSize}px`;
+
+        const lastMark = rulerContainer.lastChild;
+        if (lastMark && lastMark.getBoundingClientRect().top - mark.getBoundingClientRect().top < 20) {
+            if (!isMain || lastMark.textContent.length < mark.textContent.length) {
+                rulerContainer.removeChild(lastMark);
+            } else {
+                return;
+            }
+        }
+
+        rulerContainer.appendChild(mark);
+
+        const wave = waveTypes.find(w => value * 1e-9 <= w.wavelength);
+        if (wave && value * 1e-9 <= wave.wavelength * 10) {
+            const waveLabel = document.createElement('div');
+            waveLabel.className = 'item';
+            waveLabel.style.top = `${rulerHeight - position}px`;
+            waveLabel.textContent = wave.name;
+            waveLabel.style.fontSize = `${fontSize}px`;
+
+            if (!lastMark || waveLabel.getBoundingClientRect().top > lastMark.getBoundingClientRect().top + 20) {
+                rulerContainer.appendChild(waveLabel);
+            }
+        }
     }
 
     function placeItems() {
@@ -40,6 +96,11 @@ document.addEventListener("DOMContentLoaded", function() {
             itemElement.style.top = `${rulerHeight - position}px`;
             itemElement.style.fontSize = `${fontSize}px`;
             itemElement.textContent = item.name;
+
+            const lastItem = rulerContainer.lastChild;
+            if (lastItem && lastItem.getBoundingClientRect().top - itemElement.getBoundingClientRect().top < 20) {
+                return;
+            }
 
             rulerContainer.appendChild(itemElement);
         });

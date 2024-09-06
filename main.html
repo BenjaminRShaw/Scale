@@ -3,36 +3,576 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Linear Vertical Ruler</title>
+    <title>Interactive Scale Ruler</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
+        body, html {
             margin: 0;
+            padding: 0;
+            height: 100%;
             overflow: hidden;
-        }
-        #ruler-container {
-            width: 120px;
-            height: 100vh;
-            background-color: #f0f0f0;
-            border-right: 2px solid #ccc;
-            position: relative;
-        }
-        .ruler-mark {
-            width: 100%;
-            height: 1px;
+            font-family: Arial, sans-serif;
             background-color: black;
+            color: white;
+        }
+        #ruler {
             position: absolute;
-            left: 0;
+            left: 10px;
+            bottom: 10px;
+            top: 10px;
+            width: 150px;
+            background-color: #888;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5), 
+                        0 0 5px rgba(255,255,255,0.2);
+        }
+        .tick {
+            position: absolute;
+            right: 0;
+            width: 15px;
+            height: 2px;
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+        .label {
+            position: absolute;
+            right: 20px;
+            font-size: 10.5px;
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+        }
+        #items {
+            position: absolute;
+            left: 170px;
+            bottom: 10px;
+            right: 10px;
+            top: 10px;
+            overflow: hidden;
         }
         .item {
             position: absolute;
-            left: 140px;
-            font-size: 14px;
+            left: 0;
+            white-space: nowrap;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .item::before {
+            content: "←";
+            margin-right: 5px;
+        }
+        .item.staggered {
+            left: 20px;
+        }
+        .item.staggered::before {
+            content: "↖";
         }
     </style>
 </head>
 <body>
-    <div id="ruler-container"></div>
-    <script src="script.js"></script>
+    <div id="ruler"></div>
+    <div id="items"></div>
+
+    <script>
+        const ruler = document.getElementById('ruler');
+        const items = document.getElementById('items');
+        const maxHeight = 135; // 135mm
+        let scale = 1;
+
+        const itemsList = [
+
+
+
+{ name: "Cosmic inflation (length)", size: 1e-32 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Cosmic_inflation"},
+{ name: "Cosmic inflation bubble (diameter)", size: 1e-32 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Cosmic_inflation"},
+{ name: "Cosmic inflation period (length)", size: 1e-32 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Cosmic_inflation"},
+{ name: "Cosmic string (diameter)", size: 1e-27 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Cosmic_string"},
+{ name: "Dark energy (density)", size: 1e-27 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Dark_energy"},
+{ name: "Dark matter particle (diameter)", size: 1e-27 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Dark_matter"},
+{ name: "Dark matter particle (size)", size: 1e-27 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Dark_matter"},
+{ name: "Gravitational wave (wavelength)", size: 1e-21 , category: "Physics", link:"https://en.wikipedia.org/wiki/Gravitational_wave"},
+{ name: "Gravitational wave ripple (length)", size: 1e-21 , category: "Physics", link:"https://en.wikipedia.org/wiki/Gravitational_wave"},
+{ name: "Alpha particle (diameter)", size: 1e-15 , category: "Physics", link:"https://en.wikipedia.org/wiki/Alpha_particle"},
+{ name: "Atomic nucleus (diameter)", size: 1e-15 , category: "Physics", link:"https://en.wikipedia.org/wiki/Atomic_nucleus"},
+{ name: "Cosmic ray (wavelength)", size: 1e-15 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Cosmic_ray"},
+{ name: "Helium nucleus (diameter)", size: 1e-15 , category: "Physics", link:"https://en.wikipedia.org/wiki/Helium-4"},
+{ name: "Electron", size: 1e-13 , category: "Physics", link:"https://en.wikipedia.org/wiki/Electron"},
+{ name: "Gamma ray (wavelength)", size: 1e-12 , category: "Physics", link:"https://en.wikipedia.org/wiki/Gamma_ray"},
+{ name: "Gamma-ray radiation (wavelength)", size: 1e-12 , category: "Physics", link:"https://en.wikipedia.org/wiki/Gamma_ray"},
+{ name: "Covalent bond (length)", size: 1e-10 , category: "Physics", link:"https://en.wikipedia.org/wiki/Covalent_bond"},
+{ name: "Dipole moment (length)", size: 1e-10 , category: "Physics", link:"https://en.wikipedia.org/wiki/Electric_dipole_moment"},
+{ name: "Gamma-ray burst (diameter)", size: 1e-10 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Gamma-ray_burst"},
+{ name: "Hawking radiation (wavelength)", size: 1e-10 , category: "Physics", link:"https://en.wikipedia.org/wiki/Hawking_radiation"},
+{ name: "Hydrogen atom (diameter)", size: 1.2e-10 , category: "Physics", link:"https://en.wikipedia.org/wiki/Hydrogen_atom"},
+{ name: "Hydrogen bond (length)", size: 1.5e-10 , category: "Physics", link:"https://en.wikipedia.org/wiki/Hydrogen_bond"},
+{ name: "Ionic bond (length)", size: 2e-10 , category: "Physics", link:"https://en.wikipedia.org/wiki/Ionic_bond"},
+{ name: "Iron atom (diameter)", size: 2.8e-10 , category: "Physics", link:"https://en.wikipedia.org/wiki/Iron"},
+{ name: "Gene (length)", size: 1e-09 , category: "Biology", link:"https://en.wikipedia.org/wiki/Gene"},
+{ name: "Glucose molecule (length)", size: 1e-09 , category: "Biology", link:"https://en.wikipedia.org/wiki/Glucose"},
+{ name: "Hormone molecule (length)", size: 1e-09 , category: "Biology", link:"https://en.wikipedia.org/wiki/Hormone"},
+{ name: "DNA double helix (width)", size: 2e-09 , category: "Biology", link:"https://en.wikipedia.org/wiki/DNA"},
+{ name: "DNA strand (width)", size: 2e-09 , category: "Biology", link:"https://en.wikipedia.org/wiki/DNA"},
+{ name: "Infrared light (wavelength)", size: 1e-06 , category: "Physics", link:"https://en.wikipedia.org/wiki/Infrared"},
+{ name: "Infrared radiation (wavelength)", size: 1e-06 , category: "Physics", link:"https://en.wikipedia.org/wiki/Infrared"},
+{ name: "DNA strand (length)", size: 2e-06 , category: "Biology", link:"https://en.wikipedia.org/wiki/DNA"},
+{ name: "Chromosome (length)", size: 5e-06 , category: "Biology", link:"https://en.wikipedia.org/wiki/Chromosome"},
+{ name: "Cell membrane (thickness)", size: 1e-05 , category: "Biology", link:"https://en.wikipedia.org/wiki/Cell_membrane"},
+{ name: "Cloud droplet (diameter)", size: 1e-05 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Cloud"},
+{ name: "Enzyme (length)", size: 1e-05 , category: "Biology", link:"https://en.wikipedia.org/wiki/Enzyme"},
+{ name: "Human skin cell (diameter)", size: 3e-05 , category: "Biology", link:"https://en.wikipedia.org/wiki/Skin_cell"},
+{ name: "Egg cell (diameter)", size: 0.0001 , category: "Biology", link:"https://en.wikipedia.org/wiki/Ovum"},
+{ name: "Endoplasmic reticulum (length)", size: 0.0001 , category: "Biology", link:"https://en.wikipedia.org/wiki/Endoplasmic_reticulum"},
+{ name: "Hair (diameter)", size: 0.0001 , category: "Biology", link:"https://en.wikipedia.org/wiki/Hair"},
+{ name: "Helium atom (diameter)", size: 0.0001 , category: "Physics", link:"https://en.wikipedia.org/wiki/Helium"},
+{ name: "Human hair (diameter)", size: 0.0001 , category: "Biology", link:"https://en.wikipedia.org/wiki/Hair"},
+{ name: "Alveoli (diameter)", size: 0.00025 , category: "Biology", link:"https://en.wikipedia.org/wiki/Alveolus"},
+{ name: "Grain of sand (diameter)", size: 0.0005 , category: "Other", link:"https://en.wikipedia.org/wiki/Sand"},
+{ name: "Amino acid (length)", size: 0.001 , category: "Biology", link:"https://en.wikipedia.org/wiki/Amino_acid"},
+{ name: "Cosmic microwave background (wavelength)", size: 0.001 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Cosmic_microwave_background"},
+{ name: "Cosmic microwave background radiation (wavelength)", size: 0.001 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Cosmic_microwave_background"},
+{ name: "Golgi apparatus (length)", size: 0.001 , category: "Biology", link:"https://en.wikipedia.org/wiki/Golgi_apparatus"},
+{ name: "Hair follicle (diameter)", size: 0.001 , category: "Biology", link:"https://en.wikipedia.org/wiki/Hair_follicle"},
+{ name: "Bacterium (length)", size: 0.002 , category: "Biology", link:"https://en.wikipedia.org/wiki/Bacteria"},
+{ name: "Flea (length)", size: 0.0025 , category: "Animals", link:"https://en.wikipedia.org/wiki/Flea"},
+{ name: "Artery (diameter)", size: 0.004 , category: "Biology", link:"https://en.wikipedia.org/wiki/Artery"},
+{ name: "Coronary artery (diameter)", size: 0.004 , category: "Biology", link:"https://en.wikipedia.org/wiki/Coronary_artery"},
+{ name: "Hair follicle (length)", size: 0.004 , category: "Biology", link:"https://en.wikipedia.org/wiki/Hair_follicle"},
+{ name: "Chloroplast (length)", size: 0.005 , category: "Biology", link:"https://en.wikipedia.org/wiki/Chloroplast"},
+{ name: "Grain of rice (length)", size: 0.007 , category: "Other", link:"https://en.wikipedia.org/wiki/Rice"},
+{ name: "Cochlea (diameter)", size: 0.009 , category: "Biology", link:"https://en.wikipedia.org/wiki/Cochlea"},
+{ name: "Eye lens (diameter)", size: 0.009 , category: "Biology", link:"https://en.wikipedia.org/wiki/Lens_(anatomy)"},
+{ name: "Ant (length)", size: 0.01 , category: "Animals", link:"https://en.wikipedia.org/wiki/Ant"},
+{ name: "Coffee bean (length)", size: 0.01 , category: "Other", link:"https://en.wikipedia.org/wiki/Coffee_bean"},
+{ name: "Coral polyps (diameter)", size: 0.01 , category: "Animals", link:"https://en.wikipedia.org/wiki/Coral_polyp"},
+{ name: "Coral reef polyps (diameter)", size: 0.01 , category: "Animals", link:"https://en.wikipedia.org/wiki/Coral_polyp"},
+{ name: "Diamond (length)", size: 0.01 , category: "Other", link:"https://en.wikipedia.org/wiki/Diamond"},
+{ name: "Eardrum (diameter)", size: 0.01 , category: "Biology", link:"https://en.wikipedia.org/wiki/Eardrum"},
+{ name: "Embryo (length)", size: 0.01 , category: "Biology", link:"https://en.wikipedia.org/wiki/Embryo"},
+{ name: "Eyelash (length)", size: 0.01 , category: "Biology", link:"https://en.wikipedia.org/wiki/Eyelash"},
+{ name: "Cornea (diameter)", size: 0.012 , category: "Biology", link:"https://en.wikipedia.org/wiki/Cornea"},
+{ name: "Iris (diameter)", size: 0.012 , category: "Biology", link:"https://en.wikipedia.org/wiki/Iris_(anatomy)"},
+{ name: "Dime (diameter)", size: 0.0179 , category: "Other", link:"https://en.wikipedia.org/wiki/Dime_(United_States_coin)"},
+{ name: "Computer chip (length)", size: 0.02 , category: "Other", link:"https://en.wikipedia.org/wiki/Integrated_circuit"},
+{ name: "Ear lobe (length)", size: 0.02 , category: "Biology", link:"https://en.wikipedia.org/wiki/Earlobe"},
+{ name: "Eyebrow hair (length)", size: 0.02 , category: "Biology", link:"https://en.wikipedia.org/wiki/Eyebrow"},
+{ name: "Fingernail (length)", size: 0.02 , category: "Biology", link:"https://en.wikipedia.org/wiki/Nail_(anatomy)"},
+{ name: "Fingertip (length)", size: 0.02 , category: "Biology", link:"https://en.wikipedia.org/wiki/Finger"},
+{ name: "Heart valve (length)", size: 0.02 , category: "Biology", link:"https://en.wikipedia.org/wiki/Heart_valve"},
+{ name: "Human fingernail (length)", size: 0.02 , category: "Biology", link:"https://en.wikipedia.org/wiki/Nail_(anatomy)"},
+{ name: "Knuckle (diameter)", size: 0.02 , category: "Biology", link:"https://en.wikipedia.org/wiki/Knuckle"},
+{ name: "Eyeball (diameter)", size: 0.024 , category: "Biology", link:"https://en.wikipedia.org/wiki/Eye"},
+{ name: "Human eye (diameter)", size: 0.024 , category: "Biology", link:"https://en.wikipedia.org/wiki/Eye"},
+{ name: "Aorta (diameter)", size: 0.025 , category: "Biology", link:"https://en.wikipedia.org/wiki/Aorta"},
+{ name: "Auditory canal (length)", size: 0.025 , category: "Biology", link:"https://en.wikipedia.org/wiki/Ear_canal"},
+{ name: "Adrenal gland (diameter)", size: 0.05 , category: "Biology", link:"https://en.wikipedia.org/wiki/Adrenal_gland"},
+{ name: "Amber (diameter)", size: 0.05 , category: "Other", link:"https://en.wikipedia.org/wiki/Amber"},
+{ name: "Barnacle (diameter)", size: 0.05 , category: "Animals", link:"https://en.wikipedia.org/wiki/Barnacle"},
+{ name: "Battery (length)", size: 0.05 , category: "Other", link:"https://en.wikipedia.org/wiki/Battery_(electricity)"},
+{ name: "Chin (length)", size: 0.05 , category: "Biology", link:"https://en.wikipedia.org/wiki/Chin"},
+{ name: "Continental drift (distance)", size: 0.05 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Continental_drift"},
+{ name: "Emerald (length)", size: 0.05 , category: "Other", link:"https://en.wikipedia.org/wiki/Emerald"},
+{ name: "Finger bone (length)", size: 0.05 , category: "Biology", link:"https://en.wikipedia.org/wiki/Phalanx_bone"},
+{ name: "Gemstone (length)", size: 0.05 , category: "Other", link:"https://en.wikipedia.org/wiki/Gemstone"},
+{ name: "Gold nugget (length)", size: 0.05 , category: "Other", link:"https://en.wikipedia.org/wiki/Gold_nugget"},
+{ name: "Hailstone (diameter)", size: 0.05 , category: "Biology", link:"https://en.wikipedia.org/wiki/Hail"},
+{ name: "Joint (diameter)", size: 0.05 , category: "Biology", link:"https://en.wikipedia.org/wiki/Joint"},
+{ name: "Kneecap (diameter)", size: 0.05 , category: "Biology", link:"https://en.wikipedia.org/wiki/Patella"},
+{ name: "Larynx (length)", size: 0.05 , category: "Biology", link:"https://en.wikipedia.org/wiki/Larynx"},
+{ name: "Ear (length)", size: 0.06 , category: "Biology", link:"https://en.wikipedia.org/wiki/Ear"},
+{ name: "Egg (length)", size: 0.06 , category: "Biology", link:"https://en.wikipedia.org/wiki/Egg"},
+{ name: "Baseball (diameter)", size: 0.074 , category: "Other", link:"https://en.wikipedia.org/wiki/Baseball_(ball)"},
+{ name: "Amethyst (length)", size: 0.1 , category: "Other", link:"https://en.wikipedia.org/wiki/Amethyst"},
+{ name: "Ankle joint (diameter)", size: 0.1 , category: "Biology", link:"https://en.wikipedia.org/wiki/Ankle"},
+{ name: "Apollo 11 landing site (length)", size: 0.1 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Tranquility_Base"},
+{ name: "Appendix (length)", size: 0.1 , category: "Biology", link:"https://en.wikipedia.org/wiki/Vermiform_appendix"},
+{ name: "Apple (diameter)", size: 0.1 , category: "Other", link:"https://en.wikipedia.org/wiki/Apple"},
+{ name: "Ashfall (depth)", size: 0.1 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Volcanic_ash"},
+{ name: "Cerebellum (diameter)", size: 0.1 , category: "Biology", link:"https://en.wikipedia.org/wiki/Cerebellum"},
+{ name: "Cerebellum (length)", size: 0.1 , category: "Biology", link:"https://en.wikipedia.org/wiki/Cerebellum"},
+{ name: "Cheek (length)", size: 0.1 , category: "Biology", link:"https://en.wikipedia.org/wiki/Cheek"},
+{ name: "Cheekbone (length)", size: 0.1 , category: "Biology", link:"https://en.wikipedia.org/wiki/Zygomatic_bone"},
+{ name: "Clownfish (length)", size: 0.1 , category: "Animals", link:"https://en.wikipedia.org/wiki/Clownfish"},
+{ name: "Coral (diameter)", size: 0.1 , category: "Animals", link:"https://en.wikipedia.org/wiki/Coral"},
+{ name: "Crystal (length)", size: 0.1 , category: "Other", link:"https://en.wikipedia.org/wiki/Crystal"},
+{ name: "Dendrite (length)", size: 0.1 , category: "Biology", link:"https://en.wikipedia.org/wiki/Dendrite"},
+{ name: "Dragonfly (wingspan)", size: 0.1 , category: "Animals", link:"https://en.wikipedia.org/wiki/Dragonfly"},
+{ name: "Elbow joint (diameter)", size: 0.1 , category: "Biology", link:"https://en.wikipedia.org/wiki/Elbow_joint"},
+{ name: "Finger (length)", size: 0.1 , category: "Biology", link:"https://en.wikipedia.org/wiki/Finger"},
+{ name: "Fingers (length)", size: 0.1 , category: "Biology", link:"https://en.wikipedia.org/wiki/Finger"},
+{ name: "Fist (length)", size: 0.1 , category: "Biology", link:"https://en.wikipedia.org/wiki/Hand"},
+{ name: "Forehead (length)", size: 0.1 , category: "Biology", link:"https://en.wikipedia.org/wiki/Forehead"},
+{ name: "Fossilized tooth (length)", size: 0.1 , category: "Other", link:"https://en.wikipedia.org/wiki/Fossil"},
+{ name: "Frog (length)", size: 0.1 , category: "Animals", link:"https://en.wikipedia.org/wiki/Frog"},
+{ name: "Gallbladder (length)", size: 0.1 , category: "Biology", link:"https://en.wikipedia.org/wiki/Gallbladder"},
+{ name: "Geode (diameter)", size: 0.1 , category: "Other", link:"https://en.wikipedia.org/wiki/Geode"},
+{ name: "Gerbil (length)", size: 0.1 , category: "Animals", link:"https://en.wikipedia.org/wiki/Gerbil"},
+{ name: "Hamster (length)", size: 0.1 , category: "Animals", link:"https://en.wikipedia.org/wiki/Hamster"},
+{ name: "Heel (length)", size: 0.1 , category: "Biology", link:"https://en.wikipedia.org/wiki/Heel"},
+{ name: "Human mandible (length)", size: 0.1 , category: "Biology", link:"https://en.wikipedia.org/wiki/Mandible"},
+{ name: "Iron ore (length)", size: 0.1 , category: "Other", link:"https://en.wikipedia.org/wiki/Iron_ore"},
+{ name: "Knee (length)", size: 0.1 , category: "Biology", link:"https://en.wikipedia.org/wiki/Knee"},
+{ name: "Knee joint (diameter)", size: 0.1 , category: "Biology", link:"https://en.wikipedia.org/wiki/Knee"},
+{ name: "Heart (length)", size: 0.12 , category: "Biology", link:"https://en.wikipedia.org/wiki/Heart"},
+{ name: "Human heart (length)", size: 0.12 , category: "Biology", link:"https://en.wikipedia.org/wiki/Heart"},
+{ name: "Human kidney (length)", size: 0.12 , category: "Biology", link:"https://en.wikipedia.org/wiki/Kidney"},
+{ name: "Kidney (length)", size: 0.12 , category: "Biology", link:"https://en.wikipedia.org/wiki/Kidney"},
+{ name: "Human brain (length)", size: 0.15 , category: "Biology", link:"https://en.wikipedia.org/wiki/Human_brain"},
+{ name: "Human clavicle (length)", size: 0.15 , category: "Biology", link:"https://en.wikipedia.org/wiki/Clavicle"},
+{ name: "Human liver (length)", size: 0.15 , category: "Biology", link:"https://en.wikipedia.org/wiki/Liver"},
+{ name: "Human pancreas (length)", size: 0.15 , category: "Biology", link:"https://en.wikipedia.org/wiki/Pancreas"},
+{ name: "Human scapula (length)", size: 0.15 , category: "Biology", link:"https://en.wikipedia.org/wiki/Scapula"},
+{ name: "Jaw (length)", size: 0.15 , category: "Biology", link:"https://en.wikipedia.org/wiki/Jaw"},
+{ name: "Human hand (length)", size: 0.18 , category: "Biology", link:"https://en.wikipedia.org/wiki/Hand"},
+{ name: "Colosseum (diameter)", size: 0.19 , category: "Buildings", link:"https://en.wikipedia.org/wiki/Colosseum"},
+{ name: "Abyssal hill (height)", size: 0.2 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Abyssal_hill"},
+{ name: "Clam shell (length)", size: 0.2 , category: "Animals", link:"https://en.wikipedia.org/wiki/Clam"},
+{ name: "Crab leg (length)", size: 0.2 , category: "Animals", link:"https://en.wikipedia.org/wiki/Crab"},
+{ name: "Hedgehog (length)", size: 0.2 , category: "Animals", link:"https://en.wikipedia.org/wiki/Hedgehog"},
+{ name: "Human rib (length)", size: 0.2 , category: "Biology", link:"https://en.wikipedia.org/wiki/Rib"},
+{ name: "Human skull (diameter)", size: 0.2 , category: "Biology", link:"https://en.wikipedia.org/wiki/Skull"},
+{ name: "Basketball (diameter)", size: 0.24 , category: "Other", link:"https://en.wikipedia.org/wiki/Basketball_(ball)"},
+{ name: "Ankle (length)", size: 0.25 , category: "Biology", link:"https://en.wikipedia.org/wiki/Ankle"},
+{ name: "Chipmunk (length)", size: 0.25 , category: "Animals", link:"https://en.wikipedia.org/wiki/Chipmunk"},
+{ name: "Esophagus (length)", size: 0.25 , category: "Biology", link:"https://en.wikipedia.org/wiki/Esophagus"},
+{ name: "Finch (wingspan)", size: 0.25 , category: "Animals", link:"https://en.wikipedia.org/wiki/Finch"},
+{ name: "Forearm (length)", size: 0.25 , category: "Biology", link:"https://en.wikipedia.org/wiki/Forearm"},
+{ name: "Guinea pig (length)", size: 0.25 , category: "Animals", link:"https://en.wikipedia.org/wiki/Guinea_pig"},
+{ name: "Human foot (length)", size: 0.25 , category: "Biology", link:"https://en.wikipedia.org/wiki/Foot"},
+{ name: "Human pelvis (length)", size: 0.25 , category: "Biology", link:"https://en.wikipedia.org/wiki/Pelvis"},
+{ name: "Human stomach (length)", size: 0.25 , category: "Biology", link:"https://en.wikipedia.org/wiki/Stomach"},
+{ name: "Football (length)", size: 0.28 , category: "Other", link:"https://en.wikipedia.org/wiki/Football_(ball)"},
+{ name: "Abdomen (length)", size: 0.3 , category: "Biology", link:"https://en.wikipedia.org/wiki/Abdomen"},
+{ name: "Circuit board (length)", size: 0.3 , category: "Other", link:"https://en.wikipedia.org/wiki/Printed_circuit_board"},
+{ name: "Conch shell (length)", size: 0.3 , category: "Animals", link:"https://en.wikipedia.org/wiki/Conch"},
+{ name: "Crab (length)", size: 0.3 , category: "Animals", link:"https://en.wikipedia.org/wiki/Crab"},
+{ name: "Diaphragm (length)", size: 0.3 , category: "Biology", link:"https://en.wikipedia.org/wiki/Thoracic_diaphragm"},
+{ name: "Elbow (length)", size: 0.3 , category: "Biology", link:"https://en.wikipedia.org/wiki/Elbow"},
+{ name: "Fish (length)", size: 0.3 , category: "Animals", link:"https://en.wikipedia.org/wiki/Fish"},
+{ name: "Human lung (length)", size: 0.3 , category: "Biology", link:"https://en.wikipedia.org/wiki/Lung"},
+{ name: "Human ulna (length)", size: 0.3 , category: "Biology", link:"https://en.wikipedia.org/wiki/Ulna"},
+{ name: "Jellyfish (diameter)", size: 0.3 , category: "Animals", link:"https://en.wikipedia.org/wiki/Jellyfish"},
+{ name: "Jellyfish bell (diameter)", size: 0.3 , category: "Animals", link:"https://en.wikipedia.org/wiki/Jellyfish"},
+{ name: "Humerus (length)", size: 0.35 , category: "Biology", link:"https://en.wikipedia.org/wiki/Humerus"},
+{ name: "Laptop (length)", size: 0.35 , category: "Other", link:"https://en.wikipedia.org/wiki/Laptop"},
+{ name: "Chest (length)", size: 0.4 , category: "Biology", link:"https://en.wikipedia.org/wiki/Thorax"},
+{ name: "Fibula (length)", size: 0.4 , category: "Biology", link:"https://en.wikipedia.org/wiki/Fibula"},
+{ name: "Human tibia (length)", size: 0.4 , category: "Biology", link:"https://en.wikipedia.org/wiki/Tibia"},
+{ name: "3D printer (length)", size: 0.5 , category: "Other", link:"https://en.wikipedia.org/wiki/3D_printing"},
+{ name: "Bat (wingspan)", size: 0.5 , category: "Animals", link:"https://en.wikipedia.org/wiki/Bat"},
+{ name: "Chameleon (length)", size: 0.5 , category: "Animals", link:"https://en.wikipedia.org/wiki/Chameleon"},
+{ name: "Computer monitor (diagonal)", size: 0.5 , category: "Other", link:"https://en.wikipedia.org/wiki/Computer_monitor"},
+{ name: "Dolphin fin (height)", size: 0.5 , category: "Animals", link:"https://en.wikipedia.org/wiki/Dolphin"},
+{ name: "Eelgrass bed (length)", size: 0.5 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Eelgrass"},
+{ name: "Falcon (length)", size: 0.5 , category: "Animals", link:"https://en.wikipedia.org/wiki/Falcon"},
+{ name: "Femur (length)", size: 0.5 , category: "Biology", link:"https://en.wikipedia.org/wiki/Femur"},
+{ name: "Ferret (length)", size: 0.5 , category: "Animals", link:"https://en.wikipedia.org/wiki/Ferret"},
+{ name: "Fetus (length)", size: 0.5 , category: "Biology", link:"https://en.wikipedia.org/wiki/Fetus"},
+{ name: "Fossil (length)", size: 0.5 , category: "Other", link:"https://en.wikipedia.org/wiki/Fossil"},
+{ name: "Human bone (length)", size: 0.5 , category: "Biology", link:"https://en.wikipedia.org/wiki/Bone"},
+{ name: "Human femur (length)", size: 0.5 , category: "Biology", link:"https://en.wikipedia.org/wiki/Femur"},
+{ name: "Human hair (length)", size: 0.5 , category: "Biology", link:"https://en.wikipedia.org/wiki/Hair"},
+{ name: "Horseshoe crab (length)", size: 0.6 , category: "Animals", link:"https://en.wikipedia.org/wiki/Horseshoe_crab"},
+{ name: "Arm (length)", size: 0.7 , category: "Biology", link:"https://en.wikipedia.org/wiki/Arm"},
+{ name: "Human spine (length)", size: 0.7 , category: "Biology", link:"https://en.wikipedia.org/wiki/Vertebral_column"},
+{ name: "Armadillo (length)", size: 0.75 , category: "Animals", link:"https://en.wikipedia.org/wiki/Armadillo"},
+{ name: "Baboon (height)", size: 0.75 , category: "Animals", link:"https://en.wikipedia.org/wiki/Baboon"},
+{ name: "Jackal (length)", size: 0.8 , category: "Animals", link:"https://en.wikipedia.org/wiki/Jackal"},
+{ name: "Koala (length)", size: 0.8 , category: "Animals", link:"https://en.wikipedia.org/wiki/Koala"},
+{ name: "Fox (length)", size: 0.9 , category: "Animals", link:"https://en.wikipedia.org/wiki/Fox"},
+{ name: "Axon (length)", size: 1.0 , category: "Biology", link:"https://en.wikipedia.org/wiki/Axon"},
+{ name: "Basalt rock (length)", size: 1.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Basalt"},
+{ name: "Baseball bat (length)", size: 1.0 , category: "Other", link:"https://en.wikipedia.org/wiki/Baseball_bat"},
+{ name: "Chair (height)", size: 1.0 , category: "Other", link:"https://en.wikipedia.org/wiki/Chair"},
+{ name: "Crow (wingspan)", size: 1.0 , category: "Animals", link:"https://en.wikipedia.org/wiki/Crow"},
+{ name: "Desert oasis (diameter)", size: 1.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Oasis"},
+{ name: "Dinosaur footprint (length)", size: 1.0 , category: "Animals", link:"https://en.wikipedia.org/wiki/Dinosaur_footprint"},
+{ name: "Dog (length)", size: 1.0 , category: "Animals", link:"https://en.wikipedia.org/wiki/Dog"},
+{ name: "Drone (wingspan)", size: 1.0 , category: "Vehicles", link:"https://en.wikipedia.org/wiki/Unmanned_aerial_vehicle"},
+{ name: "Fjord wall (height)", size: 1.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Fjord"},
+{ name: "Frozen lake (thickness)", size: 1.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Lake_ice"},
+{ name: "High-energy laser (length)", size: 1.0 , category: "Physics", link:"https://en.wikipedia.org/wiki/Laser"},
+{ name: "Chimpanzee (height)", size: 1.2 , category: "Animals", link:"https://en.wikipedia.org/wiki/Chimpanzee"},
+{ name: "Coyote (length)", size: 1.2 , category: "Animals", link:"https://en.wikipedia.org/wiki/Coyote"},
+{ name: "Falcon (wingspan)", size: 1.2 , category: "Animals", link:"https://en.wikipedia.org/wiki/Falcon"},
+{ name: "Hawk (wingspan)", size: 1.2 , category: "Animals", link:"https://en.wikipedia.org/wiki/Hawk"},
+{ name: "Colon (length)", size: 1.5 , category: "Biology", link:"https://en.wikipedia.org/wiki/Colon_(anatomy)"},
+{ name: "Eel (length)", size: 1.5 , category: "Animals", link:"https://en.wikipedia.org/wiki/Eel"},
+{ name: "Gazelle (length)", size: 1.5 , category: "Animals", link:"https://en.wikipedia.org/wiki/Gazelle"},
+{ name: "HDMI cable (length)", size: 1.5 , category: "Vehicles", link:"https://en.wikipedia.org/wiki/HDMI"},
+{ name: "Hyena (length)", size: 1.5 , category: "Animals", link:"https://en.wikipedia.org/wiki/Hyena"},
+{ name: "Large intestine (length)", size: 1.5 , category: "Biology", link:"https://en.wikipedia.org/wiki/Large_intestine"},
+{ name: "Human (height)", size: 1.7 , category: "Biology", link:"https://en.wikipedia.org/wiki/Human"},
+{ name: "Human body (height)", size: 1.7 , category: "Biology", link:"https://en.wikipedia.org/wiki/Human_body"},
+{ name: "Gorilla (height)", size: 1.75 , category: "Animals", link:"https://en.wikipedia.org/wiki/Gorilla"},
+{ name: "Astronaut spacesuit (length)", size: 1.8 , category: "Other", link:"https://en.wikipedia.org/wiki/Space_suit"},
+{ name: "Barracuda (length)", size: 1.8 , category: "Animals", link:"https://en.wikipedia.org/wiki/Barracuda"},
+{ name: "Deer (length)", size: 1.8 , category: "Animals", link:"https://en.wikipedia.org/wiki/Deer"},
+{ name: "Emu (height)", size: 1.9 , category: "Animals", link:"https://en.wikipedia.org/wiki/Emu"},
+{ name: "Couch (length)", size: 2.0 , category: "Other", link:"https://en.wikipedia.org/wiki/Sofa"},
+{ name: "Door (height)", size: 2.0 , category: "Other", link:"https://en.wikipedia.org/wiki/Door"},
+{ name: "GPS satellite (length)", size: 2.0 , category: "Vehicles", link:"https://en.wikipedia.org/wiki/Global_Positioning_System"},
+{ name: "Geothermal vent (height)", size: 2.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Hydrothermal_vent"},
+{ name: "Granite slab (length)", size: 2.0 , category: "Other", link:"https://en.wikipedia.org/wiki/Granite"},
+{ name: "Industrial robot (length)", size: 2.0 , category: "Vehicles", link:"https://en.wikipedia.org/wiki/Industrial_robot"},
+{ name: "Jellyfish tentacle (length)", size: 2.0 , category: "Animals", link:"https://en.wikipedia.org/wiki/Jellyfish"},
+{ name: "Kangaroo (height)", size: 2.0 , category: "Animals", link:"https://en.wikipedia.org/wiki/Kangaroo"},
+{ name: "Laser cutter (length)", size: 2.0 , category: "Vehicles", link:"https://en.wikipedia.org/wiki/Laser_cutting"},
+{ name: "Eagle (wingspan)", size: 2.3 , category: "Animals", link:"https://en.wikipedia.org/wiki/Eagle"},
+{ name: "Dolphin (length)", size: 2.5 , category: "Animals", link:"https://en.wikipedia.org/wiki/Dolphin"},
+{ name: "Elk (length)", size: 2.5 , category: "Animals", link:"https://en.wikipedia.org/wiki/Elk"},
+{ name: "Grizzly bear (length)", size: 2.5 , category: "Animals", link:"https://en.wikipedia.org/wiki/Grizzly_bear"},
+{ name: "Horse (length)", size: 2.5 , category: "Animals", link:"https://en.wikipedia.org/wiki/Horse"},
+{ name: "Coal seam (thickness)", size: 3.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Coal_seam"},
+{ name: "Communication satellite (length)", size: 3.0 , category: "Vehicles", link:"https://en.wikipedia.org/wiki/Communications_satellite"},
+{ name: "Condor (wingspan)", size: 3.0 , category: "Animals", link:"https://en.wikipedia.org/wiki/Condor"},
+{ name: "Ice core (length)", size: 3.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Ice_core"},
+{ name: "Alligator (length)", size: 4.0 , category: "Animals", link:"https://en.wikipedia.org/wiki/Alligator"},
+{ name: "Jet engine (length)", size: 4.0 , category: "Vehicles", link:"https://en.wikipedia.org/wiki/Jet_engine"},
+{ name: "Electric car (length)", size: 4.5 , category: "Vehicles", link:"https://en.wikipedia.org/wiki/Electric_car"},
+{ name: "Crocodile (length)", size: 5.0 , category: "Animals", link:"https://en.wikipedia.org/wiki/Crocodile"},
+{ name: "Cyclotron (diameter)", size: 5.0 , category: "Physics", link:"https://en.wikipedia.org/wiki/Cyclotron"},
+{ name: "Giraffe (height)", size: 5.5 , category: "Animals", link:"https://en.wikipedia.org/wiki/Giraffe"},
+{ name: "Elephant (length)", size: 6.0 , category: "Animals", link:"https://en.wikipedia.org/wiki/Elephant"},
+{ name: "Human intestine (length)", size: 7.0 , category: "Biology", link:"https://en.wikipedia.org/wiki/Intestine"},
+{ name: "Intestine (length)", size: 7.0 , category: "Biology", link:"https://en.wikipedia.org/wiki/Intestine"},
+{ name: "Deep-sea submersible (length)", size: 10.0 , category: "Vehicles", link:"https://en.wikipedia.org/wiki/Deep-submergence_vehicle"},
+{ name: "Estuary (width)", size: 10.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Estuary"},
+{ name: "Fish school (length)", size: 10.0 , category: "Animals", link:"https://en.wikipedia.org/wiki/Schooling_fish"},
+{ name: "Fishing boat (length)", size: 10.0 , category: "Vehicles", link:"https://en.wikipedia.org/wiki/Fishing_vessel"},
+{ name: "Hot spring (diameter)", size: 10.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Hot_spring"},
+{ name: "Hydrothermal chimney (height)", size: 10.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Hydrothermal_vent"},
+{ name: "Hydrothermal vent (height)", size: 10.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Hydrothermal_vent"},
+{ name: "Ice floe (diameter)", size: 10.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Ice_floe"},
+{ name: "Island (diameter)", size: 10.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Island"},
+{ name: "Lava flow (length)", size: 10.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Lava_flow"},
+{ name: "Halley's Comet (diameter)", size: 11.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Halley's_Comet"},
+{ name: "Hubble Space Telescope (length)", size: 13.2 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Hubble_Space_Telescope"},
+{ name: "Fighter jet (length)", size: 15.0 , category: "Vehicles", link:"https://en.wikipedia.org/wiki/Fighter_aircraft"},
+{ name: "Helicopter (length)", size: 15.0 , category: "Vehicles", link:"https://en.wikipedia.org/wiki/Helicopter"},
+{ name: "Kuiper belt (width)", size: 20.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Kuiper_belt"},
+{ name: "Coral atoll (diameter)", size: 30.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Atoll"},
+{ name: "Geyser (height)", size: 30.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Geyser"},
+{ name: "Geyser eruption (height)", size: 30.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Geyser"},
+{ name: "Kelp forest (height)", size: 45.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Kelp_forest"},
+{ name: "Coral reef (depth)", size: 50.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Coral_reef"},
+{ name: "Isthmus (width)", size: 50.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Isthmus"},
+{ name: "Lake (diameter)", size: 50.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Lake"},
+{ name: "Commercial airplane (wingspan)", size: 60.0 , category: "Vehicles", link:"https://en.wikipedia.org/wiki/Airplane"},
+{ name: "International Space Station (length)", size: 72.8 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/International_Space_Station"},
+{ name: "Continental shelf (width)", size: 80.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Continental_shelf"},
+{ name: "Aluminum deposit (length)", size: 100.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Bauxite"},
+{ name: "Cave (depth)", size: 100.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Cave"},
+{ name: "Cavern (depth)", size: 100.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Cave"},
+{ name: "Cliff (height)", size: 100.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Cliff"},
+{ name: "Coastal erosion (length)", size: 100.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Coastal_erosion"},
+{ name: "Conveyor belt (length)", size: 100.0 , category: "Other", link:"https://en.wikipedia.org/wiki/Conveyor_belt"},
+{ name: "Copper deposit (length)", size: 100.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Copper_extraction"},
+{ name: "Data center (length)", size: 100.0 , category: "Other", link:"https://en.wikipedia.org/wiki/Data_center"},
+{ name: "Ethernet cable (length)", size: 100.0 , category: "Vehicles", link:"https://en.wikipedia.org/wiki/Ethernet"},
+{ name: "Factory assembly line (length)", size: 100.0 , category: "Other", link:"https://en.wikipedia.org/wiki/Assembly_line"},
+{ name: "Fiber optic cable (length)", size: 100.0 , category: "Vehicles", link:"https://en.wikipedia.org/wiki/Optical_fiber"},
+{ name: "Fjord (length)", size: 100.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Fjord"},
+{ name: "Globular cluster (diameter)", size: 100.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Globular_cluster"},
+{ name: "Gulf Stream (width)", size: 100.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Gulf_Stream"},
+{ name: "Hill (height)", size: 100.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Hill"},
+{ name: "Launch tower (height)", size: 120.0 , category: "Buildings", link:"https://en.wikipedia.org/wiki/Launch_tower"},
+{ name: "Cooling tower (height)", size: 200.0 , category: "Buildings", link:"https://en.wikipedia.org/wiki/Cooling_tower"},
+{ name: "Hoover Dam (height)", size: 221.0 , category: "Buildings", link:"https://en.wikipedia.org/wiki/Hoover_Dam"},
+{ name: "Eiffel Tower (height)", size: 324.0 , category: "Buildings", link:"https://en.wikipedia.org/wiki/Eiffel_Tower"},
+{ name: "Aircraft carrier (length)", size: 330.0 , category: "Vehicles", link:"https://en.wikipedia.org/wiki/Aircraft_carrier"},
+{ name: "Empire State Building (height)", size: 443.2 , category: "Buildings", link:"https://en.wikipedia.org/wiki/Empire_State_Building"},
+{ name: "Iceberg (length)", size: 500.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Iceberg"},
+{ name: "Earthquake hypocenter (depth)", size: 700.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Hypocenter"},
+{ name: "Angel Falls (height)", size: 979.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Angel_Falls"},
+{ name: "Archipelago (length)", size: 1000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Archipelago"},
+{ name: "Artesian well (depth)", size: 1000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Artesian_aquifer"},
+{ name: "Coal mine (depth)", size: 1000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Coal_mining"},
+{ name: "Earthquake fault line (length)", size: 1000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Fault_(geology)"},
+{ name: "Earthquake wave (wavelength)", size: 1000.0 , category: "Physics", link:"https://en.wikipedia.org/wiki/Seismic_wave"},
+{ name: "Fault zone (length)", size: 1000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Fault_(geology)"},
+{ name: "Floodplain (width)", size: 1000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Floodplain"},
+{ name: "Gas pipeline (length)", size: 1000.0 , category: "Vehicles", link:"https://en.wikipedia.org/wiki/Natural_gas_pipeline"},
+{ name: "Glacier moraine (length)", size: 1000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Moraine"},
+{ name: "Glacier terminus (length)", size: 1000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Glacier"},
+{ name: "Glacier tongue (length)", size: 1000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Glacier"},
+{ name: "Grassland (width)", size: 1000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Grassland"},
+{ name: "Gulf (width)", size: 1000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Gulf"},
+{ name: "Hydroelectric dam (length)", size: 1000.0 , category: "Buildings", link:"https://en.wikipedia.org/wiki/Hydroelectric_dam"},
+{ name: "Ice shelf (thickness)", size: 1000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Ice_shelf"},
+{ name: "Iceberg calving event (length)", size: 1000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Iceberg"},
+{ name: "Island chain (length)", size: 1000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Island_chain"},
+{ name: "Karst landscape (length)", size: 1000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Karst"},
+{ name: "Arctic Ocean (width)", size: 1500.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Arctic_Ocean"},
+{ name: "Grand Canyon (depth)", size: 1600.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Grand_Canyon"},
+{ name: "Antarctic ice sheet (thickness)", size: 2000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Antarctic_ice_sheet"},
+{ name: "Arctic tundra (width)", size: 2000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Tundra"},
+{ name: "Coral reef (length)", size: 2300.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Coral_reef"},
+{ name: "Great Barrier Reef (length)", size: 2300.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Great_Barrier_Reef"},
+{ name: "Golden Gate Bridge (length)", size: 2737.0 , category: "Buildings", link:"https://en.wikipedia.org/wiki/Golden_Gate_Bridge"},
+{ name: "Aurora Australis (extent)", size: 3000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Aurora"},
+{ name: "Aurora Borealis (extent)", size: 3000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Aurora"},
+{ name: "Ice cap (thickness)", size: 3000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Ice_cap"},
+{ name: "Jupiter’s moon Europa (diameter)", size: 3121.6 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Europa_(moon)"},
+{ name: "Amazon Rainforest (width)", size: 3200.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Amazon_rainforest"},
+{ name: "Abyssal plain (depth)", size: 5000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Abyssal_plain"},
+{ name: "Continent (width)", size: 5000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Continent"},
+{ name: "Desert (width)", size: 5000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Desert"},
+{ name: "Atlantic Ocean (width)", size: 6400.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Atlantic_Ocean"},
+{ name: "Indian Ocean (width)", size: 7350.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Indian_Ocean"},
+{ name: "Asteroid impact (diameter)", size: 10000.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Impact_event"},
+{ name: "Comet (diameter)", size: 10000.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Comet"},
+{ name: "Earthquake epicenter (distance)", size: 10000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Epicenter"},
+{ name: "Exosphere (thickness)", size: 10000.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Exosphere"},
+{ name: "Galactic arm (width)", size: 10000.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Spiral_galaxy"},
+{ name: "Glacier (length)", size: 10000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Glacier"},
+{ name: "Deep-sea trench (depth)", size: 11000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Oceanic_trench"},
+{ name: "Exoplanet (diameter)", size: 12742.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Exoplanet"},
+{ name: "Jupiter’s Great Red Spot (diameter)", size: 16350.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Great_Red_Spot"},
+{ name: "Great Wall of China (length)", size: 21196.0 , category: "Buildings", link:"https://en.wikipedia.org/wiki/Great_Wall_of_China"},
+{ name: "Earth’s crust (thickness)", size: 40000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Crust_(geology)"},
+{ name: "Ice giant (diameter)", size: 50000.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Ice_giant"},
+{ name: "Earth’s atmosphere (thickness)", size: 100000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Atmosphere_of_Earth"},
+{ name: "Elliptical galaxy (diameter)", size: 100000.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Elliptical_galaxy"},
+{ name: "Galaxy (diameter)", size: 100000.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Galaxy"},
+{ name: "Jupiter (diameter)", size: 139820.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Jupiter"},
+{ name: "Gas giant (diameter)", size: 140000.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Gas_giant"},
+{ name: "Hot Jupiter (diameter)", size: 140000.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Hot_Jupiter"},
+{ name: "Ceres (diameter)", size: 946000.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Ceres_(dwarf_planet)"},
+{ name: "Asteroid (diameter)", size: 1000000.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Asteroid"},
+{ name: "Earth’s mantle (thickness)", size: 2900000.0 , category: "Geograhy", link:"https://en.wikipedia.org/wiki/Mantle_(geology)"},
+{ name: "Earth's core (diameter)", size: 6800000.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Structure_of_the_Earth"},
+{ name: "Earth’s core (diameter)", size: 6800000.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Structure_of_the_Earth"},
+{ name: "Earth's magnetic field (extent)", size: 10000000.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Earth%27s_magnetic_field"},
+{ name: "Earth's magnetic poles (distance)", size: 12000000.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Magnetic_pole"},
+{ name: "Earth (diameter)", size: 12740000.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Earth"},
+{ name: "Earth-like planet (diameter)", size: 12740000.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Earth_analog"},
+{ name: "Earth's magnetosphere (extent)", size: 63000000.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Magnetosphere"},
+{ name: "Great Attractor (diameter)", size: 100000000.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Great_Attractor"},
+{ name: "Galaxy filament (length)", size: 500000000.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Galaxy_filament"},
+{ name: "Hercules-Corona Borealis Great Wall (length)", size: 1000000000.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Hercules-Corona_Borealis_Great_Wall"},
+{ name: "Astronomical unit (distance)", size: 149600000000.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Astronomical_unit"},
+{ name: "Asteroid belt (width)", size: 220000000000.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Asteroid_belt"},
+{ name: "Earth’s orbit (diameter)", size: 299200000000.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Orbit_of_the_Earth"},
+{ name: "Accretion disk (diameter)", size: 1000000000000.0 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Accretion_disk"},
+{ name: "Dwarf galaxy (diameter)", size: 1e+19 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Dwarf_galaxy"},
+{ name: "Interstellar medium (diameter)", size: 1e+20 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Interstellar_medium"},
+{ name: "Barred spiral galaxy (diameter)", size: 1e+21 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Barred_spiral_galaxy"},
+{ name: "Cosmic microwave background anisotropy (length)", size: 1e+22 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Cosmic_microwave_background"},
+{ name: "Cosmic ray (length)", size: 1e+22 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Cosmic_ray"},
+{ name: "Cosmic ray shower (extent)", size: 1e+22 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Cosmic_ray"},
+{ name: "Dark matter halo (diameter)", size: 1e+22 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Dark_matter_halo"},
+{ name: "Andromeda galaxy (diameter)", size: 2.2e+22 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Andromeda_Galaxy"},
+{ name: "Astrophysical jet (length)", size: 3.1e+22 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Astrophysical_jet"},
+{ name: "Cosmic void (diameter)", size: 1e+24 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Void_(astronomy)"},
+{ name: "Intergalactic medium (diameter)", size: 1e+24 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Intergalactic_medium"},
+{ name: "Coma Cluster (diameter)", size: 2.5e+24 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Coma_Cluster"},
+{ name: "Laniakea Supercluster (diameter)", size: 5.2e+24 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Laniakea_Supercluster"},
+{ name: "Cosmic string (length)", size: 1e+26 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Cosmic_string"},
+{ name: "Cosmic web (diameter)", size: 1e+26 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Cosmic_web"},
+{ name: "Dark energy density (extent)", size: 1e+26 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Dark_energy"},
+{ name: "Cosmic horizon (diameter)", size: 8.8e+26 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Observable_universe"},
+{ name: "Cosmic neutrino background (extent)", size: 8.8e+26 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Cosmic_neutrino_background"},
+{ name: "Inflationary universe (diameter)", size: 8.8e+26 , category: "Astronomy", link:"https://en.wikipedia.org/wiki/Inflation_(cosmology)"},
+
+        ].sort((a, b) => b.size - a.size);
+
+        function getOptimalIncrement(range) {
+            const base = Math.pow(10, Math.floor(Math.log10(range)));
+            const options = [0.1 * base, 0.2 * base, 0.5 * base, base];
+            return options.find(option => range / option >= 4 && range / option <= 10) || base;
+        }
+
+        function formatUnit(value) {
+            const units = [
+                { unit: 'nm', factor: 1e-9 },
+                { unit: 'µm', factor: 1e-6 },
+                { unit: 'mm', factor: 1e-3 },
+                { unit: 'm', factor: 1 },
+                { unit: 'km', factor: 1e3 },
+                { unit: 'Mm', factor: 1e6 },
+                { unit: 'Gm', factor: 1e9 },
+                { unit: 'Tm', factor: 1e12 },
+                { unit: 'Pm', factor: 1e15 },
+            ];
+
+            for (let i = units.length - 1; i >= 0; i--) {
+                if (value >= units[i].factor || i === 0) {
+                    return `${Math.round(value / units[i].factor)} ${units[i].unit}`;
+                }
+            }
+        }
+
+        function createRuler() {
+            ruler.innerHTML = '';
+            const height = maxHeight * scale;
+            const increment = getOptimalIncrement(height);
+
+            for (let i = 0; i <= height; i += increment) {
+                const tick = document.createElement('div');
+                tick.className = 'tick';
+                tick.style.bottom = `${i * 100 / height}%`;
+                ruler.appendChild(tick);
+
+                const label = document.createElement('div');
+                label.className = 'label';
+                if (i === 0) {
+                    label.textContent = '0';
+                    label.style.bottom = '2px'; // Move zero position up slightly
+                } else {
+                    label.textContent = `${formatUnit(i)} (${i.toExponential(0)}m)`;
+                    label.style.bottom = `calc(${i * 100 / height}% - 5px)`; // Align text with the dash
+                }
+                ruler.appendChild(label);
+            }
+        }
+
+        function updateItems() {
+            items.innerHTML = '';
+            const visibleItems = itemsList.filter(item => item.size <= maxHeight * scale && item.size >= 0.01 * maxHeight * scale);
+            const itemHeight = 20; // Estimated height of each item in pixels
+            const minDistance = (itemHeight / items.clientHeight) * 100; // Minimum distance in percentage
+
+            let lastPosition = -Infinity;
+            visibleItems.forEach((item, index) => {
+                const position = item.size * 100 / (maxHeight * scale);
+                
+                // Skip this item if it's too close to the previous one
+                if (position - lastPosition < minDistance) {
+                    return;
+                }
+
+                const itemElement = document.createElement('div');
+                itemElement.className = 'item';
+                itemElement.textContent = `${item.name} (${formatUnit(item.size)})`;
+                itemElement.style.bottom = `${position}%`;
+                
+                // Stagger if necessary
+                if (index > 0 && position - lastPosition < minDistance * 2) {
+                    itemElement.classList.add('staggered');
+                }
+                
+                items.appendChild(itemElement);
+                lastPosition = position;
+            });
+        }
+
+        function handleScroll(event) {
+            event.preventDefault();
+            const delta = Math.sign(event.deltaY);
+            const zoomFactor = Math.pow(2, 1/8);
+            scale = Math.max(1e-10, Math.min(1e10, scale * Math.pow(zoomFactor, -delta)));
+            createRuler();
+            updateItems();
+        }
+
+        createRuler();
+        updateItems();
+        window.addEventListener('wheel', handleScroll, { passive: false });
+        window.addEventListener('resize', () => {
+            createRuler();
+            updateItems();
+        });
+    </script>
 </body>
 </html>

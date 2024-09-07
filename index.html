@@ -29,13 +29,13 @@
         .tick {
             position: absolute;
             right: 0;
-            width: 15px;
+            width: 13.5px;
             height: 2px;
             background-color: rgba(0, 0, 0, 0.7);
         }
         .label {
             position: absolute;
-            right: 20px;
+            right: 18px;
             font-size: 11.55px;
             color: white;
             font-weight: bold;
@@ -79,6 +79,7 @@
         const items = document.getElementById('items');
         const maxHeight = 135; // 135mm
         let scale = 1;
+        let lastTouchY = 0;
 
         const itemsList = [
             { name: "Cosmic inflation (length)", size: 1e-32, category: "Astronomy", link: "https://en.wikipedia.org/wiki/Cosmic_inflation" },
@@ -157,42 +158,62 @@
         function updateItems() {
             items.innerHTML = '';
             const visibleItems = itemsList.filter(item => item.size <= maxHeight * scale && item.size >= 0.01 * maxHeight * scale);
-            const minDistance = 10; // Minimum distance in pixels
+            const itemHeight = 20; // Estimated height of each item in pixels
+            const minDistance = 10 / items.clientHeight * 100; // 10 pixels in percentage
 
+            let lastPosition = -Infinity;
             visibleItems.forEach((item, index) => {
                 const position = item.size * 100 / (maxHeight * scale);
-                const pixelPosition = (items.clientHeight * position) / 100;
-
-                // Check if this item is too close to a larger item
-                const isTooClose = visibleItems.slice(0, index).some(largerItem => {
-                    const largerItemPosition = (largerItem.size * 100 / (maxHeight * scale));
-                    const largerItemPixelPosition = (items.clientHeight * largerItemPosition) / 100;
-                    return Math.abs(pixelPosition - largerItemPixelPosition) < minDistance;
-                });
-
-                if (!isTooClose) {
-                    const itemElement = document.createElement('div');
-                    itemElement.className = 'item';
-                    itemElement.textContent = `${item.name} (${formatUnit(item.size)})`;
-                    itemElement.style.bottom = `${position}%`;
-                    
-                    items.appendChild(itemElement);
+                
+                // Skip this item if it's too close to the previous one and smaller
+                if (position - lastPosition < minDistance && index > 0 && item.size < visibleItems[index - 1].size) {
+                    return;
                 }
+
+                const itemElement = document.createElement('div');
+                itemElement.className = 'item';
+                itemElement.textContent = `${item.name} (${formatUnit(item.size)})`;
+                itemElement.style.bottom = `${position}%`;
+                
+                // Stagger if necessary
+                if (position - lastPosition < minDistance) {
+                    itemElement.classList.add('staggered');
+                    itemElement.style.bottom = `calc(${position}% - 10px)`;
+                }
+                
+                items.appendChild(itemElement);
+                lastPosition = position;
             });
         }
 
-        function handleScroll(event) {
-            event.preventDefault();
-            const delta = Math.sign(event.deltaY);
+        function handleZoom(delta) {
             const zoomFactor = Math.pow(2, 1/8);
             scale = Math.max(1e-10, Math.min(1e10, scale * Math.pow(zoomFactor, -delta)));
             createRuler();
             updateItems();
         }
 
+        function handleWheel(event) {
+            event.preventDefault();
+            handleZoom(Math.sign(event.deltaY));
+        }
+
+        function handleTouchStart(event) {
+            lastTouchY = event.touches[0].clientY;
+        }
+
+        function handleTouchMove(event) {
+            const touchY = event.touches[0].clientY;
+            const delta = lastTouchY - touchY;
+            handleZoom(Math.sign(delta));
+            lastTouchY = touchY;
+        }
+
         createRuler();
         updateItems();
-        window.addEventListener('wheel', handleScroll, { passive: false });
+        window.addEventListener('wheel', handleWheel, { passive: false });
+        window.addEventListener('touchstart', handleTouchStart, { passive: false });
+        window.addEventListener('touchmove', handleTouchMove, { passive: false });
         window.addEventListener('resize', () => {
             createRuler();
             updateItems();
